@@ -1,0 +1,1 @@
+\copy nodes FROM 'nodes.txt'

@@ -1,0 +1,1 @@
+\copy ways FROM 'ways.txt'

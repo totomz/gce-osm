@@ -1,0 +1,1 @@
+\copy relation_members FROM 'relation_members.txt'

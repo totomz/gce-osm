@@ -1,0 +1,1 @@
+\copy way_nodes FROM 'way_nodes.txt'
