@@ -18,10 +18,10 @@ osmosis/bin/osmosis --read-pbf-fast file=$PATH_DUMPS/dataset.osm.pbf workers=8 -
             nodeLocationStoreType=InMemory && rm $PATH_DUMPS/dataset.osm.pbf
 
 # Create the db schema
-psql -U $DB_USER -W -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_schema_0.6.sql
-psql -U $DB_USER -W -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_schema_0.6_linestring.sql
-psql -U $DB_USER -W -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_schema_0.6_bbox.sql
-psql -U $DB_USER -W -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_load_0.6.sql
+psql -U $DB_USER -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_schema_0.6.sql
+psql -U $DB_USER -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_schema_0.6_linestring.sql
+psql -U $DB_USER -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_schema_0.6_bbox.sql
+psql -U $DB_USER -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_load_0.6.sql
 
 # Copy load scripts in the dump folder
 cp *.sql $PATH_DUMPS
