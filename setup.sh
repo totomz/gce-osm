@@ -156,7 +156,7 @@ if [ "$executeTuner" = "yes" ]
     sed -i "s/.*deadlock_timeout.*$/deadlock_timeout = 5min/" $pg_conf_file
 
 	# Move pg_data
-	sed -i "s/.*data_directory.*$/data_directory='$MOUNT_SSD1'/" $pg_conf_file
+	sed -i "s/.*data_directory.*$/data_directory='$MOUNT_SSD1/main'/" $pg_conf_file # BUG! va escapato il path!
 	cp -r /var/lib/postgresql/9.3/main $MOUNT_SSD1
 	chown -R postgres:postgres $MOUNT_SSD1
 	mkdir $MOUNT_SSD1/temp && chmod -R 0777 $MOUNT_SSD1/temp # Temp dir for operations
