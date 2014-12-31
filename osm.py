@@ -7,9 +7,9 @@ import psycopg2
 import subprocess
 
 
-DB_NAME = ""
-DB_USER = ""
-DUMP_PATHS = ""
+DB_NAME = "osm"
+DB_USER = "osm"
+DUMP_PATHS = "/osmdata/dumps"
 
 class SQLQuery(Workflow.Action):
 
