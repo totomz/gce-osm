@@ -3,6 +3,7 @@ __author__ = 'tommaso doninelli'
 import datetime
 import threading
 import logging
+import logging.config
 
 logging.config.fileConfig('logging.yaml')
 log = logging.getLogger('simpleExample')
