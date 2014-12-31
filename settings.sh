@@ -10,12 +10,12 @@ DATASET=http://download.geofabrik.de/north-america-latest.osm.pbf # What to impo
 # DB
 DB_NAME=osm
 DB_USER=osm
-DB_USER_ALLOWED_ADDR=172.16.3.0/24
+DB_USER_ALLOWED_ADDR=0.0.0.0/0
 
 # HD settings
-DISK_SSD1=google-osm-pgdata1
+DISK_SSD1=google-osm-db-pgdata
 #DISK_SSD2=google-osm-pgdata2 #Not used yet
-DISK_DATA=google-osm-tempdata
+DISK_DATA=google-osm-db-data
 PATH_PLANET=$MOUNT_SSD1/temp    # Where the pbf is (temprary) stored
 PATH_DUMPS=$MOUNT_DATA/dumps    # Where the dumps will be generated
 
@@ -24,12 +24,12 @@ MOUNT_SSD1=/pgdata	# Mount point for pg_data
 MOUNT_DATA=/osmdata
 
 # Settings for huge memory pages
-# see
-KERN_SHMMAX=57982058496
-KERN_SHMMALL=100
-KERN_NR_HUGEPAGES=100
+# see http://www.peuss.de/node/67
+KERN_SHMMAX=98784247808
+KERN_SHMMALL=47104
+KERN_NR_HUGEPAGES=47104
 LARGEPAGE_GROUP=largemem
-LARGEPAGE_GID=1999
+LARGEPAGE_GID=1500
 
 
 # Other stuff (no need to change)
