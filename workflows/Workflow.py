@@ -4,8 +4,9 @@ import datetime
 import threading
 import logging
 import logging.config
+import concurrent.futures
 
-logging.config.fileConfig('logging.yaml')
+#logging.config.fileConfig('logging.yaml')
 log = logging.getLogger('simpleExample')
 
 
@@ -54,11 +55,16 @@ class Workflow(object):
         log.info("{} is starting".format(name))
         start = datetime.datetime.now()
 
+        with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:
+            future_to_url = {executor.submit(task.run): task for task in tasks}
+            for future in concurrent.futures.as_completed(future_to_url):
+                print("s")
+
         # Start all threads
-        [x.start() for x in tasks]
+        # [x.start() for x in tasks]
 
         # Wait for all of them to finish
-        [x.join() for x in tasks]
+        #[x.join() for x in tasks]
 
         finish = datetime.datetime.now() - start
         log.info("{} completed in {}".format(name, str(finish)))

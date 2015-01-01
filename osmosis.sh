@@ -26,10 +26,5 @@ psql -U $DB_USER -h localhost -d $DB_NAME -f osmosis/script/pgsnapshot_load_0.6.
 # Copy load scripts in the dump folder
 cp *.sql $PATH_DUMPS
 
-# Bashmajic... configuring the python script!
-sed -i "s/DB_NAME.*$/DB_NAME = \"$DB_NAME\"/" osm.py
-sed -i "s/DB_USER.*$/DB_USER = \"$DB_USER\"/" osm.py
-sed -i "s/DUMP_PATHS.*$/DUMP_PATHS = \"$PATH_DUMPS\"/" osm.py
-
 # Reboot and change instance type, or execute the workflow!
 python osm.py

@@ -6,10 +6,15 @@ from workflows import Workflow
 import psycopg2
 import subprocess
 
+# Import settings
+settings = ""
+with open("settings.sh", "r") as file:
+    for line in file:
+        if not line.startswith("#"):
+            settings += line + "\n"
 
-DB_NAME = "osm"
-DB_USER = "osm"
-DUMP_PATHS = "/osmdata/dumps"
+exec settings
+
 
 class SQLQuery(Workflow.Action):
 

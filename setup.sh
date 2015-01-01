@@ -12,6 +12,8 @@ fi
 # Read the settings
 source settings.sh
 
+CODENAME=$(lsb_release -sc)		# Version of debian
+
 # Format and mounts a gce-disk $1 disk-by-id; $2 mount point
 function gcemount {
 	parted -s /dev/disk/by-id/$1 mktable gpt
@@ -24,8 +26,16 @@ function gcemount {
 	mount -a
 }
 
+
+APT_ASSUME_YES=""
+yes="yes"
+if [ "$SILENT_INSTALL" = "yes" ]
+	then
+	APT_ASSUME_YES="--assume-yes"
+fi
+
 echo "Installing basic tools"
-apt-get update && apt-get install dialog curl pbzip2 python2.7 python-pip
+apt-get update && apt-get $APT_ASSUME_YES installp curl pbzip2 python2.7 python-pip
 
 echo "Mounting hd"
 gcemount $DISK_SSD1 $MOUNT_SSD1
@@ -34,9 +44,17 @@ gcemount $DISK_DATA $MOUNT_DATA
 
 # Change ownership of /data
 chown -R $(who am i | awk '{print $1}') $MOUNT_DATA
+
 # Install PostgreSQL
-dialog --title "Databse setup"  --yesno "I can install PostgreSQL and create a PostGIS db.\nCan I proceed?" 10 40
-if [ "$?" = "0" ]
+if [ "$SILENT_INSTALL" = "yes" ]
+    then
+    	yes="yes"
+    else
+    echo "Can I install PostgreSQL, PostGIS and Python? [yes/No]"
+	read yes
+fi
+
+if [ "$yes" = "yes" ]
 	then
 
     echo "Adding PostgreSQL repository for $CODENAME"
@@ -47,64 +65,39 @@ if [ "$?" = "0" ]
     apt-get update
 
     echo "Installing PostgreSQL and PostGIS"
-    apt-get install postgresql-9.3 postgresql-9.3-postgis-2.1 python-psycopg2
-
-    dialog \
-	  --title "DB Creation" \
-	  --inputbox "Please add the name for the db\n(will be DROPPED if exists)" \
-		10 60 "$DB_NAME" 2> $TMP_DIALOG
-	DB_NAME=$(cat $TMP_DIALOG)
-
-	# Switch to user postgresql to execute a Query...
-	su postgres -c "psql postgres -c 'DROP DATABASE IF EXISTS $DB_NAME'"
-	su postgres -c "psql postgres -c 'CREATE DATABASE $DB_NAME'"
-	su postgres -c "psql $DB_NAME -c 'CREATE EXTENSION hstore'"
-	su postgres -c "psql $DB_NAME -c 'CREATE EXTENSION postgis'"
-	su postgres -c "psql $DB_NAME -c 'CREATE EXTENSION postgis_topology'"
-
-	echo "Installed PostGIS version:"
-	su postgres -c "psql $DB_NAME -c 'SELECT PostGIS_full_version();' -t -P pager=off"
+    apt-get $APT_ASSUME_YES install postgresql-9.3 postgresql-9.3-postgis-2.1 python-psycopg2
 fi
+
+# Crete the OSM db
+# Switch to user postgresql to execute a Query...
+su postgres -c "psql postgres -c 'DROP DATABASE IF EXISTS $DB_NAME'"
+su postgres -c "psql postgres -c 'CREATE DATABASE $DB_NAME'"
+su postgres -c "psql $DB_NAME -c 'CREATE EXTENSION hstore'"
+su postgres -c "psql $DB_NAME -c 'CREATE EXTENSION postgis'"
+su postgres -c "psql $DB_NAME -c 'CREATE EXTENSION postgis_topology'"
+
+echo "Installed PostGIS version:"
+su postgres -c "psql $DB_NAME -c 'SELECT PostGIS_full_version();' -t -P pager=off"
+su postgres -c "createuser $DB_USER --pwprompt"
+su postgres -c "psql postgres -c 'GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER'"
+
 
 # ADD AN USER THAT CAN ACCESS TO THE DATABASE
-dialog --title "DB setup"  --yesno \
-	"You need an user to access the db from remote.\nCan I create it for you? " 15 60
-if [ "$?" = "0" ]
-	then
-	# Ask for a username
-	dialog \
-	  --title "DB Setup" \
-	  --inputbox "username" \
-		20 60 "$DB_USER" 2> $TMP_DIALOG
-	DB_USER=$(cat $TMP_DIALOG)
+# Updating pg_hba to allow remote connection
+fileFound=$( find / -iname 'pg_hba.conf' | wc -l )
+if [ $fileFound -gt 1 ]
+	then echo "Warning! Multiple pg_hba.conf file found. You must grant remote connection to this database to user $DB_USER to "
+else
+	fpath=$( find / -iname 'pg_hba.conf')
+	cp $fpath $(dirname $fpath)/pg_hba.conf.original
 
-	su postgres -c "createuser $DB_USER --pwprompt"
-	su postgres -c "psql postgres -c 'GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER'"
+	echo -e "\n" >> $fpath
+	echo -e "#OSM - service user " >> $fpath
+	echo -e "host\tall\t\tall\t\tlocalhost\t\ttrust" >> $fpath
+	echo -e "host\t$DB_NAME\t\t$DB_USER\t\t$DB_USER_ALLOWED_ADDR\t\tmd5" >> $fpath
 
-	#Now, some magic - add the entry to pg_hba
-	dialog \
-	  --title "DB Setup" \
-	  --inputbox "Remote address from which the user can connect\n(it will be added to pg_hba.conf)" \
-		20 60 "$DB_USER_ALLOWED_ADDR" 2> $TMP_DIALOG
-
-	DB_USER_ALLOWED_ADDR=$(cat $TMP_DIALOG)
-
-	# Updating pg_hba to allow remote connection
-	fileFound=$( find / -iname 'pg_hba.conf' | wc -l )
-	if [ $fileFound -gt 1 ]
-		then echo "Warning! Multiple pg_hba.conf file found. You must grant remote connection to this database to user $DB_USER to "
-	else
-		fpath=$( find / -iname 'pg_hba.conf')
-		cp $fpath $(dirname $fpath)/pg_hba.conf.original
-
-		echo -e "\n" >> $fpath
-		echo -e "#OSM - service user " >> $fpath
-		echo -e "host\t$DB_NAME\t\t$DB_USER\t\tlocalhost\t\ttrust" >> $fpath
-		echo -e "host\t$DB_NAME\t\t$DB_USER\t\t$DB_USER_ALLOWED_ADDR\t\tmd5" >> $fpath
-
-	fi
-	PG_HBA_PATH=$find
 fi
+
 
 echo "***************************************************************"
 echo "* WARNING! SYSTEM TUNING!                                     *"
@@ -113,10 +106,16 @@ echo "* The OSM db requires some fine tuning of postgresql.conf:    *"
 echo "* 	1) High memory                                          *"
 echo "* 	2) No WAL and big buffer size                           *"
 echo "***************************************************************"
-echo "Can I tune the db for you? [yes/No]"
-read executeTuner
 
-if [ "$executeTuner" = "yes" ]
+if [ "$SILENT_INSTALL" = "yes" ]
+    then
+    	yes="yes"
+    else
+    echo "Can I install PostgreSQL, PostGIS and Python? [yes/No]"
+	read yes
+fi
+
+if [ "$yes" = "yes" ]
 	then
 
 	# Search for postgresql.conf
@@ -150,7 +149,7 @@ if [ "$executeTuner" = "yes" ]
     sed -i "s/.*checkpoint_completition_target.*$/checkpoint_completition_target = 0.8/" $pg_conf_file
 
     # Query tuning
-    sed -i "s/.*random_page_cost.*$/random_page_cost = 2.5/" $pg_conf_file
+    sed -i "s/.*random_page_cost.*$/random_page_cost = 1/" $pg_conf_file
 
     # LOCK management
     sed -i "s/.*deadlock_timeout.*$/deadlock_timeout = 5min/" $pg_conf_file
@@ -159,25 +158,35 @@ if [ "$executeTuner" = "yes" ]
 	sed -i "s/.*data_directory.*$/data_directory='$MOUNT_SSD1/main'/" $pg_conf_file # BUG! va escapato il path!
 	cp -r /var/lib/postgresql/9.3/main $MOUNT_SSD1
 	chown -R postgres:postgres $MOUNT_SSD1
-	mkdir $MOUNT_SSD1/temp && chmod -R 0777 $MOUNT_SSD1/temp # Temp dir for operations
 
+	mkdir $MOUNT_SSD1/temp && chmod -R 0777 $MOUNT_SSD1/temp # Temp dir for operations
 	#chown -R postgres:postgres $MOUNT_SSD2
 
-	echo "Can I restart PostgreSQL service now? [yes/No]"
-	read restart
-	if [ "$restart" = "yes" ]
+	service postgresql restart
+fi
+
+if [ "$SILENT_INSTALL" = "yes" ]
+    then
+    	yes="yes"
+    else
+    echo "Can I install PostgreSQL, PostGIS and Python? [yes/No]"
+	read yes
+fi
+
+if hash java 2>/dev/null; then
+	echo "Java seems to be already installed"
+else
+
+	if [ "$yes" = "yes" ]
 		then
-			service postgresql restart
+			echo "Installing java"
+			echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu precise main" | tee /etc/apt/sources.list.d/webupd8team-java.list
+			echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu precise main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list
+			apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886
+			apt-get update
+			apt-get install oracle-java7-installer
 	fi
-fi\
-
-echo "Installing java"
-echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu precise main" | tee /etc/apt/sources.list.d/webupd8team-java.list
-echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu precise main" | tee -a /etc/apt/sources.list.d/webupd8team-java.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886
-apt-get update
-apt-get install oracle-java7-installer
-
+fi
 
 echo "Setting Huge memory pages options (these settings are not permanent)"
 echo $(KERN_SHMMAX) > /proc/sys/kernel/shmmax
@@ -185,3 +194,4 @@ echo $(KERN_SHMMAX) > /proc/sys/kernel/shmmax
 echo $(KERN_NR_HUGEPAGES) > /proc/sys/vm/nr_hugepages
 echo $(LARGEPAGE_GID) > /proc/sys/vm/hugetlb_shm_group
 
+echo "Please run ./osmosis.sh as normal user"
