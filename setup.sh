@@ -188,10 +188,4 @@ else
 	fi
 fi
 
-echo "Setting Huge memory pages options (these settings are not permanent)"
-echo $(KERN_SHMMAX) > /proc/sys/kernel/shmmax
-#echo $(KERN_SHMMALL) > /proc/sys/kernel/shmall usually no need to set this...
-echo $(KERN_NR_HUGEPAGES) > /proc/sys/vm/nr_hugepages
-echo $(LARGEPAGE_GID) > /proc/sys/vm/hugetlb_shm_group
-
 echo "Please run ./osmosis.sh as normal user"
