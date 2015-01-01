@@ -1,16 +1,50 @@
 __author__ = 'tommaso doninelli'
 
 import datetime
-import threading
+import time
 import logging
 import logging.config
+import random
 import concurrent.futures
 
-#logging.config.fileConfig('logging.yaml')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s %(levelname)s: %(message)s ',
+            'datefmt': "%Y-%m-%d %H:%M:%S",
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'formatter': 'standard',
+            'class': 'logging.StreamHandler',
+        },
+        'rotate_file': {
+            'level': 'DEBUG',
+            'formatter': 'standard',
+            'class': 'logging.FileHandler',
+            'filename': 'osmpy.log',
+            'encoding': 'utf8',
+            'mode': 'w'
+        }
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console', 'rotate_file'],
+            'level': 'DEBUG',
+        },
+    }
+}
+logging.config.dictConfig(LOGGING)
+
 log = logging.getLogger('simpleExample')
 
 
-class Action(threading.Thread):
+class Action():
     """
     An Action is a thread, with some methods for measuring the elapsed time
     Sublcass must override the method execute
@@ -26,6 +60,23 @@ class Action(threading.Thread):
         self.execute()
         elapsed = datetime.datetime.now() - start
         log.info("     {} COMPLETED in {}".format(self.name, str(elapsed)))
+
+        return self.name
+
+class Nop(Action):
+    """
+    Simple noop task
+    """
+
+    def __init__(self, cmd):
+        super(Nop, self).__init__(cmd)
+        self.cmd = cmd
+
+    def execute(self):
+        rnd = random.randint(1, 9)
+        print("!!!{} inizio sllep {}".format(self.name, rnd))
+        time.sleep(rnd)
+        print("!!!{} SVEGLIO".format(self.name))
 
 
 class Workflow(object):
@@ -58,7 +109,7 @@ class Workflow(object):
         with concurrent.futures.ThreadPoolExecutor(max_workers=pool_size) as executor:
             future_to_url = {executor.submit(task.run): task for task in tasks}
             for future in concurrent.futures.as_completed(future_to_url):
-                print("s")
+                print("completed: " + future.result())
 
         # Start all threads
         # [x.start() for x in tasks]
