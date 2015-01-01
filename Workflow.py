@@ -63,6 +63,7 @@ class Action():
 
         return self.name
 
+
 class Nop(Action):
     """
     Simple noop task

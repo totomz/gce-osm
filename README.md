@@ -33,6 +33,9 @@ First of all, you need to enable large memory pages for your account (you need t
 
 ```
 
+
+./pippo.sh |& tee -a log.txt
+
 Take note of GID and group, because you need to add them to setup.sh
 
 Clone this repo `sudo apt-get update && sudo apt-get install git && git clone https://github.com/totomz/gce-osm`
