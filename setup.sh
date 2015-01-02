@@ -135,10 +135,11 @@ if [ "$yes" = "yes" ]
     sed -i "s/.*listen_addresses.*$/listen_addresses = '*'/" $pg_conf_file
 
     # Memory management
-    sed -i "s/.*shared_buffers.*$/shared_buffers = 2GB/" $pg_conf_file
-    sed -i "s/.*temp_buffers.*$/temp_buffers = 256MB/" $pg_conf_file
-    sed -i 's/.*[^_]work_mem.*$/work_mem = 256MB/' $pg_conf_file
-    sed -i 's/.*maintenance_work_mem.*$/maintenance_work_mem = 4096MB/' $pg_conf_file
+    # These values are for A LOT of ram
+    sed -i "s/.*shared_buffers.*$/shared_buffers = 24GB/" $pg_conf_file
+    sed -i "s/.*temp_buffers.*$/temp_buffers = 24GB/" $pg_conf_file
+    sed -i 's/.*[^_]work_mem.*$/work_mem = 24GB/' $pg_conf_file
+    sed -i 's/.*maintenance_work_mem.*$/maintenance_work_mem = 36GB/' $pg_conf_file
 
     # Disabling WAL
     sed -i "s/.*wal_level.*$/wal_level = minimal/" $pg_conf_file
@@ -148,7 +149,7 @@ if [ "$yes" = "yes" ]
     sed -i "s/.*checkpoint_timeout.*$/checkpoint_timeout = 35min/" $pg_conf_file
     sed -i "s/.*checkpoint_completition_target.*$/checkpoint_completition_target = 0.8/" $pg_conf_file
 
-    # Query tuning
+    # Query tuning (ssd)
     sed -i "s/.*random_page_cost.*$/random_page_cost = 1/" $pg_conf_file
 
     # LOCK management
